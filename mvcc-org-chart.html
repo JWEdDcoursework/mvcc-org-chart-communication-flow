@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MVCC Organizational Chart</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+            padding: 20px;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .org-chart {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .level {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            width: 100%;
+        }
+
+        .org-box {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            min-width: 250px;
+            max-width: 350px;
+        }
+
+        .org-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+        }
+
+        .org-box.active {
+            border: 3px solid #667eea;
+        }
+
+        .org-box h3 {
+            color: #667eea;
+            font-size: 1.3em;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #764ba2;
+            padding-bottom: 8px;
+        }
+
+        .org-box .subtitle {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 10px;
+            font-style: italic;
+        }
+
+        .org-box .details {
+            display: none;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+            font-size: 0.95em;
+            line-height: 1.6;
+            color: #444;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .org-box.expanded .details {
+            display: block;
+        }
+
+        .org-box .toggle-icon {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.5em;
+            color: #667eea;
+            transition: transform 0.3s ease;
+        }
+
+        .org-box.expanded .toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        .connector {
+            width: 2px;
+            height: 20px;
+            background: rgba(255,255,255,0.5);
+            margin: 0 auto;
+        }
+
+        .programs-list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .programs-list li {
+            padding: 5px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .programs-list li:before {
+            content: "▸";
+            position: absolute;
+            left: 0;
+            color: #764ba2;
+        }
+
+        .sub-section {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .sub-section h4 {
+            color: #764ba2;
+            margin-bottom: 8px;
+        }
+
+        .school-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .school-box {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .school-box:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+        }
+
+        .school-box h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .school-box .programs {
+            display: none;
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #555;
+        }
+
+        .school-box.expanded .programs {
+            display: block;
+        }
+
+        .comm-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f4ff;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .comm-section h4 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .comm-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            background: white;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .comm-table th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .comm-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .comm-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .comm-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .comm-to {
+            font-weight: 600;
+            color: #764ba2;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8em;
+            }
+            
+            .org-box {
+                min-width: 100%;
+            }
+
+            .comm-table {
+                font-size: 0.9em;
+            }
+        }
+
+        .legend {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .legend h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .legend p {
+            color: #666;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎓 Mohawk Valley Community College</h1>
+            <p>Interactive Organizational Chart with Communication Flows</p>
+        </header>
+
+        <div class="legend">
+            <h3>How to Use This Chart</h3>
+            <p><strong>Click on any box</strong> to expand and view detailed information about that role or department. Click again to collapse.</p>
+        </div>
+
+        <div class="org-chart">
+            <!-- Level 1: Board of Trustees -->
+            <div class="level">
+                <div class="org-box" onclick="toggleBox(this)">
+                    <span class="toggle-icon">▼</span>
+                    <h3>Board of Trustees</h3>
+                    <div class="subtitle">Governing Body</div>
+                    <div class="details">
+                        <p><strong>Composition:</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>5 Trustees appointed by Oneida County Executive</li>
+                            <li>4 Trustees appointed by the Governor</li>
+                            <li>1 Student Trustee (elected annually, 1-year term)</li>
+                            <li>All other appointments: 7-year terms</li>
+                        </ul>
+                        <p style="margin-top: 15px;"><strong>Responsibilities:</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>Sets all college policies</li>
+                            <li>Negotiates contracts with bargaining units</li>
+                            <li>Approves college finances (budget and expenditures)</li>
+                            <li>Approves appointments at most levels</li>
+                            <li>Advocates to governmental agencies for the college</li>
+                        </ul>
+                        
+                        <div class="comm-section">
+                            <h4>📢 Communication Flows</h4>
+                            <table class="comm-table">
+                                <thead>
+                                    <tr>
+                                        <th>Communicates To</th>
+                                        <th>Communicates Through</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="comm-to">President</td>
+                                        <td>Board of Trustee meetings</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="comm-to">President's Cabinet</td>
+                                        <td>Board of Trustees meetings</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="comm-to">Mid-level Administration (AVPs, Deans, Directors)</td>
+                                        <td>Official Board Communications (memos, policy statements) and occasional attendance at Board Meetings (School presentations at BOT workshops)</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="comm-to">Faculty and Staff</td>
+                                        <td>Board meeting minutes, Public addresses at college-wide events</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="comm-to">Community/Local Legislature</td>
+                                        <td>Presentations at county legislature meetings, public addresses at on and off campus events (capital improvement groundbreaking, public partnership launches)</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="connector"></div>
+
+            <!-- Level 2: President -->
+            <div class="level">
+                <div class="org-box" onclick="toggleBox(this)">
+                    <span class="toggle-icon">▼</span>
+                    <h3>President</h3>
+                    <div class="subtitle">Chief Executive and Administrative Officer</div>
+                    <div class="details">
+                        <p><strong>Reports to:</strong> Board of Trustees</p>
+                        <p style="margin-top: 10px;"><strong>Responsibilities:</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>Makes recommendations to Board of Trustees regarding all facets of academic programs and staffing</li>
+                            <li>Executive decision-making authority as established by the Board</li>
+                            <li>Overall leadership of the college</li>
+                        </ul>
+                        
+                        <div class="comm-section">
+                            <h4>📢 Communication Flows</h4>
+                            <table class="comm-table">
+                                <thead>
+                                    <tr>
+                                        <th>Communicates To</th>
+                                        <th>Communicates Through</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="comm-to">Board of Trustees</td>
+                                        <td>Board of Trustee meetings</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="comm-to">President's Cabinet</td>
+                                        <td>Cabinet meetings</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="comm-to">Mid-level Administration (AVPs, Deans, Directors)</td>
+                                        <td>Administrator meetings, College update emails</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="comm-to">Faculty and Staff</td>
+                                        <td>Opening Day and Data Summit programs, College Senate attendance, College update emails</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="comm-to">Community/Local Legislature</td>
+                                        <td>Presentations at county legislature meetings</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="comm-to">Students</td>
+                                        <td>Attendance at Student Congress meetings, Personal interactions, Blog posts</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="connector"></div>
+
+            <!-- Level 3: Vice Presidents -->
+            <div class="level">
+                <div class="org-box" onclick="toggleBox(this)">
+                    <span class="toggle-icon">▼</span>
+                    <h3>VP of Student Affairs</h3>
+                    <div class="subtitle">Student Services Division</div>
+                    <div class="details">
+                        <p><strong>Oversees:</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>Admission</li>
+                            <li>Enrollment</li>
+                            <li>Holistic student support</li>
+                            <li>Student engagement and development</li>
+                            <li>Residence life (MVCC Dormitory Corporation)</li>
+                        </ul>
+                        <p style="margin-top: 15px;"><strong>Also serves as:</strong> Title IX and Title VI officer for the college</p>
+                    </div>
+                </div>
+
+                <div class="org-box" onclick="toggleBox(this)">
+                    <span class="toggle-icon">▼</span>
+                    <h3>VP of Learning & Academic Affairs</h3>
+                    <div class="subtitle">Academic Division</div>
+                    <div class="details">
+                        <p><strong>Responsibilities:</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>Developing goals and objectives for academic programs</li>
+                            <li>Planning and organizing instructional programs</li>
+                            <li>Maintaining financial and staffing controls</li>
+                            <li>Administering and evaluating both credit and non-credit instructional programs</li>
+                        </ul>
+                        
+                        <div class="comm-section">
+                            <h4>📢 Communication Flows</h4>
+                            <table class="comm-table">
+                                <thead>
+                                    <tr>
+                                        <th>Communicates To</th>
+                                        <th>Communicates Through</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="comm-to">President</td>
+                                        <td>Cabinet meetings</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="comm-to">Administrative Peers</td>
+                                        <td>Cabinet meetings</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="comm-to">Mid-level Administration (AVPs, Deans, Directors)</td>
+                                        <td>Leadership Team meetings</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="comm-to">Faculty and Staff</td>
+                                        <td>Through Deans and Directors</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="comm-to">Students</td>
+                                        <td>Through Deans, Directors, and faculty</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="org-box" onclick="toggleBox(this)">
+                    <span class="toggle-icon">▼</span>
+                    <h3>VP of Administrative Services</h3>
+                    <div class="subtitle">Chief Fiscal Officer & Treasurer</div>
+                    <div class="details">
+                        <p><strong>Responsibilities:</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>Acquisition and maintenance of college physical plant, equipment, and all assets</li>
+                            <li>Oversees operations according to Board policy with approved budget guidelines</li>
+                        </ul>
+                        <p style="margin-top: 15px;"><strong>Line authority over:</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>Controller</li>
+                            <li>Director of Facilities and Operations</li>
+                            <li>Registrar</li>
+                            <li>Director of Financial Aid</li>
+                            <li>Chief of Campus Security</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="connector"></div>
+
+            <!-- Level 4: Assistant Vice Presidents -->
+            <div class="level">
+                <div class="org-box" onclick="toggleBox(this)">
+                    <span class="toggle-icon">▼</span>
+                    <h3>AVP 1</h3>
+                    <div class="subtitle">Reports to VP of Learning & Academic Affairs</div>
+                    <div class="details">
+                        <p><strong>Oversees:</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>School of Public and Human Services</li>
+                            <li>School of STEM-Career</li>
+                            <li>Dual Credit</li>
+                            <li>Center for Accelerated Pathways</li>
+                        </ul>
+                        <p style="margin-top: 15px;"><em>Direct supervisor of Deans in these schools</em></p>
+                        
+                        <div class="comm-section">
+                            <h4>📢 Communication Flows</h4>
+                            <table class="comm-table">
+                                <thead>
+                                    <tr>
+                                        <th>Communicates To</th>
+                                        <th>Communicates Through</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="comm-to">President</td>
+                                        <td>Through VPs</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="comm-to">President's Cabinet</td>
+                                        <td>Through VPs</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="comm-to">Mid-level Administration (AVPs, Deans, Directors)</td>
+                                        <td>Deans Team meetings</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="comm-to">Faculty and Staff</td>
+                                        <td>Through Deans and Directors</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="comm-to">Students</td>
+                                        <td>Through Deans, Directors, faculty, and staff</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="org-box" onclick="toggleBox(this)">
+                    <span class="toggle-icon">▼</span>
+                    <h3>AVP 2</h3>
+                    <div class="subtitle">Reports to VP of Learning & Academic Affairs</div>
+                    <div class="details">
+                        <p><strong>Oversees:</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>School of Art</li>
+                            <li>School of Hospitality and Business</li>
+                            <li>School of Humanities</li>
+                            <li>Office of Assessment</li>
+                            <li>Registrar's Office</li>
+                            <li>Office of Online Learning</li>
+                            <li>College in Prison Program</li>
+                        </ul>
+                        <p style="margin-top: 15px;"><em>Direct supervisor of Deans in these schools</em></p>
+                        
+                        <div class="comm-section">
+                            <h4>📢 Communication Flows</h4>
+                            <table class="comm-table">
+                                <thead>
+                                    <tr>
+                                        <th>Communicates To</th>
+                                        <th>Communicates Through</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="comm-to">President</td>
+                                        <td>Through VPs</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="comm-to">President's Cabinet</td>
+                                        <td>Through VPs</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="comm-to">Mid-level Administration (AVPs, Deans, Directors)</td>
+                                        <td>Deans Team meetings</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="comm-to">Faculty and Staff</td>
+                                        <td>Through Deans and Directors</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="comm-to">Students</td>
+                                        <td>Through Deans, Directors, faculty, and staff</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="org-box" onclick="toggleBox(this)">
+                    <span class="toggle-icon">▼</span>
+                    <h3>AVP 3</h3>
+                    <div class="subtitle">Reports to VP of Learning & Academic Affairs</div>
+                    <div class="details">
+                        <p><strong>Oversees:</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>School of STEM-Transfer</li>
+                            <li>School of Health Sciences</li>
+                            <li>Governmental STEM grants</li>
+                            <li>STEM programs in conjunction with Griffis Air Force Base</li>
+                        </ul>
+                        <p style="margin-top: 15px;"><em>Direct supervisor of Deans in these schools</em></p>
+                        
+                        <div class="comm-section">
+                            <h4>📢 Communication Flows</h4>
+                            <table class="comm-table">
+                                <thead>
+                                    <tr>
+                                        <th>Communicates To</th>
+                                        <th>Communicates Through</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="comm-to">President</td>
+                                        <td>Through VPs</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="comm-to">President's Cabinet</td>
+                                        <td>Through VPs</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="comm-to">Mid-level Administration (AVPs, Deans, Directors)</td>
+                                        <td>Deans Team meetings</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="comm-to">Faculty and Staff</td>
+                                        <td>Through Deans and Directors</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="comm-to">Students</td>
+                                        <td>Through Deans, Directors, faculty, and staff</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="connector"></div>
+
+            <!-- Level 5: Academic Deans and Schools -->
+            <div class="level" style="max-width: 100%;">
+                <div class="org-box" onclick="toggleBox(this)" style="max-width: 100%;">
+                    <span class="toggle-icon">▼</span>
+                    <h3>Academic Deans & Schools</h3>
+                    <div class="subtitle">Department Leadership</div>
+                    <div class="details">
+                        <p><strong>Dean Responsibilities:</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px; margin-bottom: 20px;">
+                            <li>Administrate degree and certificate programs within their School</li>
+                            <li>Manage course offerings</li>
+                            <li>Evaluate faculty</li>
+                            <li>Maintain course schedules and staffing</li>
+                            <li>Assign teaching loads according to CBA guidelines</li>
+                            <li>Ensure satisfactory academic progress, rigor, and integrity</li>
+                            <li>Review transfer courses</li>
+                            <li>Certify graduation for students</li>
+                        </ul>
+
+                        <div class="comm-section">
+                            <h4>📢 Communication Flows</h4>
+                            <table class="comm-table">
+                                <thead>
+                                    <tr>
+                                        <th>Communicates To</th>
+                                        <th>Communicates Through</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="comm-to">President</td>
+                                        <td>Through AVPs to VPs</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="comm-to">President's Cabinet</td>
+                                        <td>Through AVPs</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="comm-to">Mid-level Administration (AVPs, Deans, Directors)</td>
+                                        <td>Deans Team meetings</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="comm-to">Faculty and Staff</td>
+                                        <td>School meetings, newsletters, word of mouth, classroom observations, individual emails</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="comm-to">Students</td>
+                                        <td>Through faculty, individual meetings, word of mouth, student concern forms</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="school-grid">
+                            <div class="school-box" onclick="event.stopPropagation(); toggleSchool(this)">
+                                <h4>🎨 School of Art</h4>
+                                <div class="programs">
+                                    <ul class="programs-list">
+                                        <li>Digital Media & Marketing (AS)</li>
+                                        <li>Fashion Design (AAS)</li>
+                                        <li>Fine Arts (AS)</li>
+                                        <li>Game Art (AAS)</li>
+                                        <li>Graphic Design (AAS)</li>
+                                        <li>Illustration (AAS)</li>
+                                        <li>Photography (AAS)</li>
+                                        <li>Video Production (AS)</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="school-box" onclick="event.stopPropagation(); toggleSchool(this)">
+                                <h4>📚 School of Humanities</h4>
+                                <div class="programs">
+                                    <ul class="programs-list">
+                                        <li>ESOL Certificate</li>
+                                        <li>General Studies (AS)</li>
+                                        <li>Individual Studies (AA, AS, AAS, AOS)</li>
+                                        <li>Humanities & Social Sciences (AS)</li>
+                                        <li>International Studies (AS)</li>
+                                        <li>Honors Program</li>
+                                    </ul>
+                                    <div class="sub-section" style="margin-top: 15px;">
+                                        <h4>Staff Structure:</h4>
+                                        <p><strong>College Services Associate:</strong> Assists Dean with program administration, works with faculty on syllabi and student concerns</p>
+                                        <p style="margin-top: 10px;"><strong>Full-time Faculty:</strong> Teach 15 contact hours per semester, hold office hours (1 per section/week), advise ~30 students</p>
+                                        <p style="margin-top: 10px;"><strong>Adjunct Faculty:</strong> Teach up to 9 contact hours per term, hold office hours (1 per section/week)</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="school-box" onclick="event.stopPropagation(); toggleSchool(this)">
+                                <h4>🍳 School of Hospitality and Business</h4>
+                                <div class="programs">
+                                    <ul class="programs-list">
+                                        <li>Administrative Assistant (Certificate & AAS)</li>
+                                        <li>Business Accounting (AAS)</li>
+                                        <li>Business Administration (AS & AAS)</li>
+                                        <li>Business Analytics (AS)</li>
+                                        <li>Culinary Arts Management (AOS)</li>
+                                        <li>Food Service Administration (AAS)</li>
+                                        <li>Sports Management (AS)</li>
+                                        <li>Chef Training Certificate</li>
+                                        <li>Entrepreneurship Certificate</li>
+                                        <li>Finance Certificate</li>
+                                        <li>Data Analytics Certificate</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="school-box" onclick="event.stopPropagation(); toggleSchool(this)">
+                                <h4>👥 School of Public and Human Services</h4>
+                                <div class="programs">
+                                    <p><em>Under AVP 1 supervision</em></p>
+                                </div>
+                            </div>
+
+                            <div class="school-box" onclick="event.stopPropagation(); toggleSchool(this)">
+                                <h4>🔬 School of STEM-Career</h4>
+                                <div class="programs">
+                                    <p><em>Under AVP 1 supervision</em></p>
+                                </div>
+                            </div>
+
+                            <div class="school-box" onclick="event.stopPropagation(); toggleSchool(this)">
+                                <h4>🔭 School of STEM-Transfer</h4>
+                                <div class="programs">
+                                    <p><em>Under AVP 3 supervision</em></p>
+                                </div>
+                            </div>
+
+                            <div class="school-box" onclick="event.stopPropagation(); toggleSchool(this)">
+                                <h4>🏥 School of Health Sciences</h4>
+                                <div class="programs">
+                                    <p><em>Under AVP 3 supervision</em></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleBox(element) {
+            // Close all other boxes at the same level
+            const level = element.parentElement;
+            const boxes = level.querySelectorAll('.org-box');
+            boxes.forEach(box => {
+                if (box !== element && box.classList.contains('expanded')) {
+                    box.classList.remove('expanded');
+                }
+            });
+            
+            // Toggle current box
+            element.classList.toggle('expanded');
+        }
+
+        function toggleSchool(element) {
+            element.classList.toggle('expanded');
+        }
+
+        // Add smooth scrolling for better UX
+        document.querySelectorAll('.org-box').forEach(box => {
+            box.addEventListener('click', function() {
+                setTimeout(() => {
+                    if (this.classList.contains('expanded')) {
+                        this.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                }, 100);
+            });
+        });
+    </script>
+</body>
+</html>
